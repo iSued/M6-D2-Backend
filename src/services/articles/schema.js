@@ -45,6 +45,23 @@ const ArticleSchema = new Schema(
       required: true,
       lowercase: true,
     },
+    reviews: {
+      type: [
+        {
+          text: {
+            type: String,
+            required: false,
+            lowercase: true,
+          },
+          user: {
+            type: String,
+            required: false,
+            lowercase: true,
+          },
+        },
+      ],
+      default: [],
+    },
   },
   { timestamps: true }
 );

@@ -4,6 +4,7 @@ const ArticlesSchema = require("./schema");
 
 const ArticlesRouter = express.Router();
 
+// Only articles
 ArticlesRouter.get("/", async (req, res, next) => {
   try {
     const articles = await ArticlesSchema.find();
@@ -26,7 +27,7 @@ ArticlesRouter.get("/:id", async (req, res, next) => {
     }
   } catch (error) {
     console.log(error);
-    next("While reading users list a problem occurred!");
+    next("Article not found!");
   }
 });
 
@@ -77,5 +78,73 @@ ArticlesRouter.delete("/:id", async (req, res, next) => {
     next(error);
   }
 });
+
+//Reviews Sub-Routes
+
+ArticlesRouter.get("/:id/reviews", async (req, res, next) => {
+  try {
+    const id = req.params.id;
+    const article = await ArticlesSchema.findById(id);
+    if (article) {
+      res.send(article.reviews);
+    } else {
+      res.send([]);
+      const error = new Error();
+      error.httpStatusCode = 404;
+      next(error);
+    }
+  } catch (error) {
+    console.log(error);
+    next("Article not found!");
+  }
+});
+
+ArticlesRouter.post("/:id/reviews", async (req, res, next) => {
+  try {
+    const id = req.params.id;
+    const article = await ArticlesSchema.findById(id);
+    if (article) {
+      const article = await ArticlesSchema.findByIdAndUpdate(
+        id,
+        {
+          $push: { reviews: req.body },
+        },
+        { new: true }
+      );
+      res.send(article);
+    } else {
+      const error = new Error();
+      error.httpStatusCode = 404;
+      next(error);
+    }
+  } catch (error) {
+    console.log(error);
+    next("Article not found!");
+  }
+});
+
+ArticlesRouter.delete(
+  "/articles/:id/reviews/:reviewId",
+  async (req, res, next) => {
+    try {
+      const id = req.params.id;
+      const reviewId = req.params.reviewId;
+      const article = await ArticlesSchema.findById(id);
+      if (article) {
+        const article = await ArticlesSchema.findByIdAndUpdate(id, {
+          new: true,
+        });
+        res.send(article);
+      } else {
+        const error = new Error();
+        error.httpStatusCode = 404;
+        next(error);
+      }
+    } catch (error) {
+      console.log(error);
+      next("Article not found!");
+    }
+  }
+);
 
 module.exports = ArticlesRouter;
