@@ -1,7 +1,6 @@
 const express = require("express");
-
+const mongoose = require("mongoose");
 const ArticlesSchema = require("./schema");
-
 const ArticlesRouter = express.Router();
 
 // Only articles
@@ -79,7 +78,7 @@ ArticlesRouter.delete("/:id", async (req, res, next) => {
   }
 });
 
-//Reviews Sub-Routes
+//Reviews Sub-Routers
 
 ArticlesRouter.get("/:id/reviews", async (req, res, next) => {
   try {
@@ -88,7 +87,7 @@ ArticlesRouter.get("/:id/reviews", async (req, res, next) => {
     if (article) {
       res.send(article.reviews);
     } else {
-      res.send([]);
+      res.send(article.reviews);
       const error = new Error();
       error.httpStatusCode = 404;
       next(error);
@@ -98,10 +97,35 @@ ArticlesRouter.get("/:id/reviews", async (req, res, next) => {
     next("Article not found!");
   }
 });
+ArticlesRouter.get("/:id/reviews/:reviewId", async (req, res, next) => {
+  try {
+    const { reviews } = await ArticlesSchema.findOne(
+      {
+        _id: mongoose.Types.ObjectId(req.params.id),
+      },
+      {
+        _id: 0,
+        reviews: {
+          $elemMatch: { _id: mongoose.Types.ObjectId(req.params.reviewId) },
+        },
+      }
+    );
+
+    if (reviews && reviews.length > 0) {
+      res.send(reviews[0]);
+    } else {
+      next();
+    }
+  } catch (error) {
+    console.log(error);
+    next(error);
+  }
+});
 
 ArticlesRouter.post("/:id/reviews", async (req, res, next) => {
   try {
     const id = req.params.id;
+    const reviewId = req.params.reviewId;
     const article = await ArticlesSchema.findById(id);
     if (article) {
       const article = await ArticlesSchema.findByIdAndUpdate(
@@ -123,28 +147,66 @@ ArticlesRouter.post("/:id/reviews", async (req, res, next) => {
   }
 });
 
-ArticlesRouter.delete(
-  "/articles/:id/reviews/:reviewId",
-  async (req, res, next) => {
-    try {
-      const id = req.params.id;
-      const reviewId = req.params.reviewId;
-      const article = await ArticlesSchema.findById(id);
-      if (article) {
-        const article = await ArticlesSchema.findByIdAndUpdate(id, {
+ArticlesRouter.delete("/:id/reviews/:reviewId", async (req, res, next) => {
+  try {
+    const id = req.params.id;
+    const reviewId = req.params.reviewId;
+    const article = await ArticlesSchema.findById(id);
+    if (article) {
+      const article = await ArticlesSchema.findByIdAndUpdate(
+        id,
+        { $pull: { reviews: { _id: mongoose.Types.ObjectId(reviewId) } } },
+        {
           new: true,
-        });
-        res.send(article);
-      } else {
-        const error = new Error();
-        error.httpStatusCode = 404;
-        next(error);
-      }
-    } catch (error) {
-      console.log(error);
-      next("Article not found!");
+        }
+      );
+      res.send(article);
+    } else {
+      const error = new Error(`Article with this ${id} does not exist`);
+      error.httpStatusCode = 404;
+      next(error);
     }
+  } catch (error) {
+    next(error);
   }
-);
+});
+
+ArticlesRouter.put("/:id/reviews/:reviewId", async (req, res, next) => {
+  try {
+    const { reviews } = await ArticlesSchema.findOne(
+      {
+        _id: mongoose.Types.ObjectId(req.params.id),
+      },
+      {
+        _id: 0,
+        reviews: {
+          $elemMatch: { _id: mongoose.Types.ObjectId(req.params.reviewId) },
+        },
+      }
+    );
+
+    if (reviews && reviews.length > 0) {
+      const reviewToReplace = { ...reviews[0].toObject(), ...req.body };
+
+      const modifiedReview = await ArticlesSchema.findOneAndUpdate(
+        {
+          _id: mongoose.Types.ObjectId(req.params.id),
+          "reviews._id": mongoose.Types.ObjectId(req.params.reviewId),
+        },
+        { $set: { "reviews.$": reviewToReplace } },
+        {
+          runValidators: true,
+          new: true,
+        }
+      );
+      res.send(modifiedReview);
+    } else {
+      next();
+    }
+  } catch (error) {
+    console.log(error);
+    next(error);
+  }
+});
 
 module.exports = ArticlesRouter;

@@ -50,13 +50,9 @@ const ArticleSchema = new Schema(
         {
           text: {
             type: String,
-            required: false,
-            lowercase: true,
           },
           user: {
             type: String,
-            required: false,
-            lowercase: true,
           },
         },
       ],
